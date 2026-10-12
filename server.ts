@@ -110,13 +110,98 @@ function loadSiteContent(): any {
   return null;
 }
 
+function syncPwaIcons(iconSource: string): void {
+  try {
+    if (!iconSource || typeof iconSource !== 'string') return;
+    const publicDir = path.join(process.cwd(), 'public');
+    const distDir = path.join(process.cwd(), 'dist');
+
+    let inputPath = '';
+    let tempFile = '';
+
+    if (iconSource.startsWith('data:image')) {
+      const b64 = iconSource.replace(/^data:image\/\w+;base64,/, '');
+      tempFile = path.join('/tmp', `pwa_icon_sync_${Date.now()}.png`);
+      fs.writeFileSync(tempFile, Buffer.from(b64, 'base64'));
+      inputPath = tempFile;
+    } else if (iconSource.startsWith('/')) {
+      const local = path.join(publicDir, iconSource.replace(/^\//, ''));
+      if (fs.existsSync(local)) {
+        inputPath = local;
+      } else {
+        const srcLocal = path.join(process.cwd(), iconSource.replace(/^\//, ''));
+        if (fs.existsSync(srcLocal)) {
+          inputPath = srcLocal;
+        }
+      }
+    }
+
+    if (!inputPath || !fs.existsSync(inputPath)) return;
+
+    const { execSync } = require('child_process');
+    execSync(`convert "${inputPath}" -resize 512x512\\! -quality 100 "${path.join(publicDir, 'pwa-512x512.png')}"`);
+    execSync(`convert "${inputPath}" -resize 192x192\\! -quality 100 "${path.join(publicDir, 'pwa-192x192.png')}"`);
+    execSync(`convert "${inputPath}" -resize 180x180\\! -quality 100 "${path.join(publicDir, 'apple-touch-icon.png')}"`);
+    execSync(`convert "${inputPath}" -resize 512x512\\! -quality 100 "${path.join(publicDir, 'app-icon.png')}"`);
+    execSync(`convert "${inputPath}" -resize 410x410\\! -gravity center -background "#0F382C" -extent 512x512 "${path.join(publicDir, 'pwa-maskable-512x512.png')}"`);
+    execSync(`convert "${inputPath}" -resize 32x32\\! "${path.join(publicDir, 'favicon-32x32.png')}"`);
+    execSync(`convert "${inputPath}" -resize 16x16\\! "${path.join(publicDir, 'favicon-16x16.png')}"`);
+    execSync(`convert "${inputPath}" -define icon:auto-resize=64,48,32,16 "${path.join(publicDir, 'favicon.ico')}"`);
+    
+    // Copy to assets/sheikh as well
+    try {
+      execSync(`cp "${path.join(publicDir, 'pwa-512x512.png')}" "${path.join(publicDir, 'assets', 'sheikh', 'pwa_app_icon.png')}"`);
+    } catch {}
+
+    if (fs.existsSync(distDir)) {
+      const filesToCopy = [
+        'pwa-512x512.png',
+        'pwa-192x192.png',
+        'pwa-maskable-512x512.png',
+        'apple-touch-icon.png',
+        'app-icon.png',
+        'favicon-32x32.png',
+        'favicon-16x16.png',
+        'favicon.ico',
+      ];
+      for (const f of filesToCopy) {
+        try {
+          fs.copyFileSync(path.join(publicDir, f), path.join(distDir, f));
+        } catch {}
+      }
+    }
+
+    if (tempFile && fs.existsSync(tempFile)) {
+      try { fs.unlinkSync(tempFile); } catch {}
+    }
+  } catch (err) {
+    console.warn('syncPwaIcons warning:', err);
+  }
+}
+
 function saveSiteContent(content: any): void {
   const dir = path.dirname(SITE_CONTENT_FILE);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
   fs.writeFileSync(SITE_CONTENT_FILE, JSON.stringify(content, null, 2), 'utf-8');
+
+  // Synchronize PWA install icons whenever general settings are saved
+  if (content?.general?.pwaIconUrl) {
+    syncPwaIcons(content.general.pwaIconUrl);
+  }
 }
+
+// Serve manifest with no-cache headers to ensure immediate install icon recognition
+app.get(['/manifest.json', '/manifest.webmanifest'], (req: Request, res: Response) => {
+  res.set({
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Content-Type': 'application/manifest+json; charset=utf-8',
+  });
+  res.sendFile(path.join(process.cwd(), 'public', 'manifest.json'));
+});
 
 // Cache-Control middleware for all API endpoints to guarantee instant updates
 app.use('/api', (req: Request, res: Response, next) => {

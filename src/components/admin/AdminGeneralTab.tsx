@@ -267,14 +267,26 @@ export const AdminGeneralTab: React.FC<AdminGeneralTabProps> = ({ general, onCha
             </span>
           </div>
           <ImageUploadInput
-            label="اختر أو ارفع صورة الأيقونة الدائرية لتطبيق المنصة:"
+            label="اختر أو ارفع صورة الأيقونة لتطبيق المنصة المعتمد:"
             value={general.pwaIconUrl ?? ''}
             onChange={(newUrl) => {
               updateField('pwaIconUrl', newUrl);
             }}
-            placeholder="/assets/sheikh/sheikh_kazim_26.jpg أو رابط صورة مخصصة"
-            helperText="هذه الصورة تظهر كرمز وشعار للتطبيق في نافذة التثبيت وفي إرشادات إضافة التطبيق على شاشة الهاتف."
+            placeholder="/pwa-512x512.png أو رابط صورة مخصصة"
+            helperText="هذه الصورة تمثل الشعار الرسمي للمنصة وتُعتمد كأيقونة أساسية لتثبيت التطبيق على شاشة الجوال (Android/iOS) والكمبيوتر، وكذلك في المتصفحات."
           />
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
+            <button
+              type="button"
+              onClick={() => updateField('pwaIconUrl', '/pwa-512x512.png')}
+              className="px-2.5 py-1 text-[11px] font-bold bg-[#0F382C] text-[#D4AF37] border border-[#D4AF37]/50 rounded hover:bg-[#0A261E] transition-colors"
+            >
+              استخدام الأيقونة الرسمية المعتمدة (/pwa-512x512.png)
+            </button>
+            <span className="text-[11px] text-slate-500">
+              (مطابقة تماماً لحزمة التثبيت PWA ومتوافقة مع شاشات الهواتف)
+            </span>
+          </div>
         </div>
 
         {/* Footer Bio Text */}

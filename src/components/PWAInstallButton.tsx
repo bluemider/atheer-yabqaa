@@ -9,7 +9,7 @@ export const PWAInstallButton: React.FC = () => {
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [showAndroidGuide, setShowAndroidGuide] = useState(false);
 
-  const appIcon = content?.general?.pwaIconUrl?.trim() || null;
+  const appIcon = content?.general?.pwaIconUrl?.trim() || '/pwa-192x192.png';
 
   // If already running as an installed standalone PWA, do not show button
   if (isInstalled) {
